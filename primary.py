@@ -34,24 +34,44 @@ import multiprocessing
 
 # For 40% of the marks, you should consider the case of one barber, and a waiting room with an infinite number of chairs. This means you do not have to cater for the fact that the waiting room might at any time become full.
 
-def Customer(self):
+def testCustomer(self):
     self.name = "Tod"
 
 waiting_room = multiprocessing.Queue()
 
-"""def Barber():
-    while True:
-        waiting_room.get()
-
-def Customer():"""
-waiting_room.put(Customer)
-waiting_room.put(Customer)
-waiting_room.put(Customer)
-waiting_room.put(Customer)
-waiting_room.put(Customer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
 
 
-if waiting_room == empty
+#
+#
+#
+#
+# counting semaphore for the number of customers
+semaphore_customerNum = 0
+
+# this is for the single barber case (binary semaphore)
+# either he is working, or he isn't working
+# it begins that he is NOT working
+semaphore_barber_working = 0
+
+# mutex
+# this mutex allows us to control who has access to the shared resource.
+# either a customer can be written to it, or barber accesses it to take customer 
+# when it's equal to 1, it can be messed with
+mutex_accessWaitingRoomSeats = 1
+
+infinite_waiting_room = 
+
+def Barber():
+
+def Customer():
+
+if waiting_room == empty:
+    semaphore_barber_working = 0
 
 
 # --> Waiting room --> Queue() [FIFO served basis]
@@ -72,3 +92,37 @@ print(waiting_room.get())
 
 
 # Each barber operate on it's own thread? Accessing a shared queue?
+
+# main program must start a thread of customers visiting the shop.
+
+
+
+"""Example of how to wait for enqueued tasks to be completed:
+
+def worker(): <-- this could be our barber??
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        do_work(item)
+        q.task_done()
+
+q = queue.Queue() --> could set a maxsize on this
+threads = []
+for i in range(num_worker_threads): <--- so we could set this to 3 i.e the number of barbers we want working?
+    t = threading.Thread(target=worker)
+    t.start()
+    threads.append(t)
+
+for item in source():
+    q.put(item)
+
+# block until all tasks are done
+q.join()
+
+# stop workers
+for i in range(num_worker_threads):
+    q.put(None)
+for t in threads:
+    t.join()
+"""
