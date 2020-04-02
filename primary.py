@@ -37,7 +37,7 @@ import multiprocessing
 def testCustomer(self):
     self.name = "Tod"
 
-waiting_room = multiprocessing.Queue()
+waiting_room = multiprocessing.Queue(15)
 
 waiting_room.put(testCustomer)
 waiting_room.put(testCustomer)
@@ -45,7 +45,11 @@ waiting_room.put(testCustomer)
 waiting_room.put(testCustomer)
 waiting_room.put(testCustomer)
 
-
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
+waiting_room.put(testCustomer)
 #
 #
 #
@@ -64,27 +68,21 @@ semaphore_barber_working = 0
 # when it's equal to 1, it can be messed with
 mutex_accessWaitingRoomSeats = 1
 
-infinite_waiting_room = 
+# infinite_waiting_room = 
 
-def Barber():
+#def Barber():
 
-def Customer():
+#def Customer():
 
-if waiting_room == empty:
-    semaphore_barber_working = 0
+# if waiting_room == empty:
+#   semaphore_barber_working = 0
 
 
 # --> Waiting room --> Queue() [FIFO served basis]
 # --> Number of chairs (waiting rooms) == Length of Queue
 
 # For 60% of the marks, you should consider the case of 1 barber, and a waiting room with 10 chairs.
-waiting_room_10 = multiprocessing.Queue(10)
-
-print(waiting_room.get())
-print(waiting_room.get())
-print(waiting_room.get())
-print(waiting_room.get())
-print(waiting_room.get())
+# waiting_room_10 = multiprocessing.Queue(10)
 
 
 # For 100% of the marks, you should consider the case of 3 barbers (minimum) and a waiting room with 15 chairs.
@@ -95,7 +93,7 @@ print(waiting_room.get())
 
 # main program must start a thread of customers visiting the shop.
 
-
+if __name__ == '__main__':
 
 """Example of how to wait for enqueued tasks to be completed:
 
