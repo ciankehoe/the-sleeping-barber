@@ -32,6 +32,8 @@ import time
 import random
 import multiprocessing
 
+global total_haircuts
+global total_customers_rejected
 # For 40% of the marks, you should consider the case of one barber, and a waiting room with an infinite number of chairs. This means you do not have to cater for the fact that the waiting room might at any time become full.
 
 def testCustomer(self):
@@ -66,6 +68,7 @@ semaphore_barber_working = 0
 # this mutex allows us to control who has access to the shared resource.
 # either a customer can be written to it, or barber accesses it to take customer 
 # when it's equal to 1, it can be messed with
+# ALLOWS US TO CONTROL WHO HAS THE ABILITY TO CHANGE STATE
 mutex_accessWaitingRoomSeats = 1
 
 # infinite_waiting_room = 
@@ -93,6 +96,8 @@ mutex_accessWaitingRoomSeats = 1
 
 # main program must start a thread of customers visiting the shop.
 
+
+# mutex to allow only one change of state
 if __name__ == '__main__':
 
 """Example of how to wait for enqueued tasks to be completed:
@@ -124,3 +129,8 @@ for i in range(num_worker_threads):
 for t in threads:
     t.join()
 """
+
+print(threading.activeCount())
+
+
+x.join() --> don't move past this line of code until thread x is finished running

@@ -1,17 +1,11 @@
 import time, random, threading
 from queue import Queue
 
-# dict mapping for names of barbers --> utilize IDs as well.
-barber_names = ["John", "Jill", "Jacob"]
-
-opening_time_length = 15
-
-haircuts_completed = 0
-
 CUSTOMERS_SEATS = 15        #Number of seats in BarberShop 
 BARBERS = 3                #Number of Barbers working
 EVENT = threading.Event()   #Event flag, keeps track of Barber/Customer interactions
-shop_open = threading.Event()
+global Earnings
+global SHOP_OPEN
 
 class Customer(threading.Thread):       #Producer Thread
     def __init__(self, queue):          #Constructor passes Global Queue (all_customers) to Class
@@ -27,10 +21,8 @@ class Customer(threading.Thread):       #Producer Thread
 
     def trim(self):
         print("Customer haircut started.")
-        a = 2 * random.random() #Retrieves random number.
+        a = 3 * random.random() #Retrieves random number.
         time.sleep(a) #Simulates the time it takes for a barber to give a haircut.
-        global haircuts_completed
-        haircuts_completed += 1
         print("Haircut finished. Haircut took {}".format(a))    #Barber finished haircut.
 
 
@@ -48,7 +40,8 @@ class Barber(threading.Thread):     #Consumer Thread
         print("------------------\nBarber sleep {}\n------------------".format(self.sleep))
     
     def run(self):
-        while not shop_open.is_set():
+        global SHOP_OPEN
+        while SHOP_OPEN:
             while self.queue.empty():
                 EVENT.wait()    #Waits for the Event flag to be set, Can be seen as the Barber Actually sleeping.
                 print("Barber is sleeping...")
@@ -57,7 +50,6 @@ class Barber(threading.Thread):     #Consumer Thread
             self.is_empty(self.queue)   
             cust = cust.get()  #FIFO Queue So first customer added is gotten.
             if cust is None:
-                EVENT.clear()
                 break
             else:
                 cust.trim() #Customers Hair is being cut
@@ -66,54 +58,51 @@ class Barber(threading.Thread):     #Consumer Thread
                 print(self.name)    #Which Barber served the Customer     
 
 def wait():
-    time.sleep(2 * random.random())
+    time.sleep(1 * random.random())
 
-#def opening_hours():
-#    print("OH LOOK AT ME PLEASE We're done -----------------------------------------")
+def opening_hours():
+    print("OH LOOK AT ME PLEASE We're done -----------------------------------------")
 
 if __name__ == '__main__':
+    SHOP_OPEN = True
     barbers = []
     all_customers = Queue(CUSTOMERS_SEATS) #A queue of size Customer Seats
- #   timer = threading.Timer(15, opening_hours)
- #   timer.start()
+    timer = threading.Timer(7.0, opening_hours)
+    timer.start()
 
     for b in range(BARBERS):
         b=Barber(all_customers) #Passing the Queue to the Barber class
         b.daemon=True   #Makes the Thread a super low priority thread allowing it to be terminated easier
         b.start()   #Invokes the run method in the Barber Class
         barbers.append(b)   #Adding the Barber Thread to an array for easy referencing later on.
-    #for c in range(100): #Loop that creates infinite Customers
-    timeout = time.time() + opening_time_length
-    while True: # infinitely create customers while the shop is open / still accepting customers
-        if time.time() > timeout:
-            print("NO MORE CUSTOMERS")
-            break
+    for c in range(10): #Loop that creates infinite Customers
         print("----")
-        print("Length of Queue", all_customers.qsize())    #Simple Tracker too see the qsize (NOT RELIABLE!)
+        print(all_customers.qsize())    #Simple Tracker too see the qsize (NOT RELIABLE!)
         wait()
         c = Customer(all_customers) #Passing Queue object to Customer class
         all_customers.put(c)    #Puts the Customer Thread in the Queue
         c.start()   #Invokes the run method in the Customer Class
     
-  #  timer.join()
+    timer.join()
     all_customers.join()    #Terminates all Customer Threads
-    print("The shop is closed, is the queue empty?", all_customers.empty())
-    print("Total haircuts completed during opening time: ", haircuts_completed)
+    print(all_customers.empty())
+    SHOP_OPEN = False
+    
     for i in range(BARBERS):
         print("Go home")
-        #EVENT.set()
-        #EVENT.clear()
+        all_customers.put(None)
+        EVENT.set()
+        EVENT.clear()
     print(all_customers.empty())
-    # don't think i need this --> print(all_customers.get())
-    #for i in barbers:
-    #   print("please", threading.activeCount())
-    #   EVENT.set()
-    #   i.join()   #Terminates all Barbers
-        #Program hangs due to infinite loop in Barber Class, use ctrl-z to exit.
+    print(all_customers.get())
     for i in barbers:
-        print("Still working: ", i.sleep)
-
-    shop_open.set()
-
+        i.join()    #Terminates all Barbers
+        #Program hangs due to infinite loop in Barber Class, use ctrl-z to exit.
+    self
     print("do we get here at all?????????????????????????")
-    print("please", threading.activeCount())
+
+        def stop(self):
+        self.queue.put(None)
+        for i in range(self.NUMBER_OF_PROCESS):
+            self.workers[i].join()
+        self.queue.close()
