@@ -31,3 +31,16 @@ With multiple barbers, coordination aims at:
     preventing several barbers from cutting hair of the same customer.
 
     preventing from having only one busy barber while the others sleep all day long
+#################
+
+
+The problem referenced in the Wikipedia remark is this: just because you have M barbers in the "barber is cutting hair" state and M customers in the "customer is having hair cut" state, there's no guarantee that some barber isn't trying to clip more than one customer, or that some customer doesn't have several barbers in his hair.
+
+In other words, once the proper number of customers have been allowed into the cutting room, how do the barbers and customers pair off? You can no longer say "barber is cutting hair" and "customer is having hair cut"; you have to say "barber is cutting hair of customer C" and "customer is having hair cut by barber B". 
+
+
+
+
+
+Sleeping barber problem is about race conditions. Imagine you have the same Producer generating tasks(people coming to barbershop) and Consumer(barber). In case not to do busy waiting your Consumer sleeps when there are no more tasks in the queue, so when a new task arrives it first notifies Consumer that it shouldn't sleep. So now imagine a case, when you Consumer currently is executing task A, and task B arrives, it sees that Consumer is working and will just go to the queue, but its not an atomic operation, so between this check(that Consumer is busy) and adding itself to the queue, Consumer can already finish task A and check the queue, see nothing(as B is still not added), and go to sleep, however B doesn't know about that and will wait till eventually another task C will come and awake Consumer. 
+----------------> Talk about how I believe I've avoided this by making use of the event
