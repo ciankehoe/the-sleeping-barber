@@ -15,5 +15,19 @@ we can see affects on the number of haircuts completed through tweaking the leng
 a haircut (increasing might mean less in the same window of time and vice versa), and increasing the opening hours (timeout), we'll most likely see an increase in the number completed, particularly if we lower the time for a haircut also. 
 
 
+was originally going to use the Timer() object from threading in order to manage the opening window of the barbershop but instead decided to go down an event driven route
+timer = threading.Timer(15, opening_hours)
+timer.start()
+timer.join()
+
 
 GET AVERAGES
+
+
+With one barber, you only need a message queue (the waiting room). Semaphores are embedded in it.
+
+With multiple barbers, coordination aims at:
+
+    preventing several barbers from cutting hair of the same customer.
+
+    preventing from having only one busy barber while the others sleep all day long
