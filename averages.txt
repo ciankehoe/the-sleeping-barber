@@ -1,0 +1,28 @@
+5.143296406185352
+5.4519967731533985
+5.556107048706706
+4.968878027697593
+4.841057706803752
+4.703623626298269
+
+
+####
+1 barber
+###
+
+we can really see the affects of my implementation when we reduce the number of barbers to 
+
+it is heavily dependent on the length of time I allow the shop to be open for, as well as the integer constant by which
+I set the 'random' cuttime and customer frequency to
+
+
+Sample barber --> predictably it approximates to being 3 times as fast
+14.996796929689852
+
+
+#############33
+5 barbers
+15 chairs
+#############
+
+4.579432171959694

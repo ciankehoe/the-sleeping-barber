@@ -24,14 +24,13 @@ haircuts_completed = 0
 total_haircut_time = 0
 
 num_seats = 15   # Number of seats available in Barbershop waiting room.
-num_barbers = 3   # Number of Barbers working.
+num_barbers = 5   # Number of Barbers working.
 
 # Acts as a flag to notify barber when a new Customer
 # has entered the Queue. Also used to wake barber.
 customer_available = threading.Event()
 
-# Flag to control state of barbershop (open/closed); used to
-# allow barber threads to terminate.
+# Flag to control state of barbershop (open/closed); used to allow barber threads to terminate.
 shop_open = threading.Event()
 
 
@@ -64,17 +63,14 @@ class Barber(threading.Thread):
         # as the entire program exits when only these are left
         threading.Thread.__init__(self, daemon=True)
         self.queue = queue
-        # When the Barbers starts work (thread is created),
-        # there are no customers.
+        # When the Barbers starts work (thread is created), there are no customers.
         # Therefore each barber is initially asleep.
         self.sleep = True
 
     def run(self):
         while not shop_open.is_set():
             while self.queue.empty():
-                # Barber sleeps, waiting for customer to
-                # set flag arrival flag.
-                customer_available.wait()
+                customer_available.wait()    #Waits for the Event flag to be set, Can be seen as the Barber Actually sleeping.
                 print("Barber ", self.name, " - [ASLEEP]")
             print("Barber ", self.name, " - [AWAKE]")
             current_customer = self.queue
@@ -87,7 +83,7 @@ class Barber(threading.Thread):
             global customers_gone_for_cut
             customers_gone_for_cut += 1
 
-            current_customer.cut()  # Customers Hair is being cut
+            current_customer.cut() #Customers Hair is being cut
 
             # I'm not assigning specific names to the customers, so
             # each customers 'name' is simply their Thread ID Number.
@@ -113,9 +109,8 @@ class Barber(threading.Thread):
         if self.queue.empty():
             self.sleep = True
         else:
-            self.sleep = False
+            self.sleep = False 
         print(" * {} - [ASLEEP --> {}]".format(self.name, self.sleep))
-
 
 class Customer(threading.Thread):
     """Producer (Thread) Class"""
@@ -159,6 +154,7 @@ class Customer(threading.Thread):
 
 if __name__ == '__main__':
 
+    bigAverage = 0
     barbers = []
 
     # The Queue constructor creates a lock to protect the queue (our shared resource) when an element is added or removed.
@@ -170,12 +166,12 @@ if __name__ == '__main__':
 
     for worker in range(num_barbers):
         # Giving the Barber access to the Queue (waiting room).
-        worker = Barber(waiting_room)
+        worker=Barber(waiting_room)
         # Starts the thread which calls the run method.
         worker.start()
-
+        
         # Name our barber thread for easy identification.
-        map_barber(worker)
+        #map_barber(worker)
 
         print("Barber ID: ", worker.name)
         barbers.append(worker)
@@ -184,9 +180,9 @@ if __name__ == '__main__':
     # for only the opening_time_length period.
     timeout = time.time() + opening_time_length
 
-    # infinitely create customers while the shop
+    # infinitely create customers while the shop 
     # is open / still accepting customers.
-    while True:
+    while True: 
         if time.time() > timeout:
             print("STORE CLOSED. NO MORE CUSTOMERS ARE ALLOWED ENTER.")
             # No more customers are allowed to enter, but the ones
@@ -221,3 +217,9 @@ if __name__ == '__main__':
     print("Total number of haircuts completed (during opening time): {:>7}".format(haircuts_completed))
     print("----------------------------------")
     print("Average haircut time: ", total_haircut_time / haircuts_completed)
+    
+    bigAverage += total_haircut_time / haircuts_completed
+    f = open("averages.txt", "a")
+    f.write(str(bigAverage))
+    f.write("\n")
+    f.close()
