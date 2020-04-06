@@ -61,3 +61,8 @@ The following events are properly sequenced: customer waits in waiting room, cus
 The barber doesn't oversleep and miss a customer sitting in the barber chair. Each customer signals the barber when they've sat down, and using semaphores means that the order in which the customer signals and the barber waits doesn't matter. (With a condition variable, if the customer signalled before the barber went back to sleep after the previous customer, the barber would miss the wakeup call.) YES
 
 There is no deadlock. The only time that hold-and-wait occurs is when the customer is holding the barberchair lock and is attempting to acquire the waitingRoom lock. However, whenever the waitingRoom lock is held, there is nothing (other than the scheduling of the thread to run) to prevent the lock from being released.
+
+
+Considered placing None objects in the queue but that means the barber would be checking the queue to find out the store is closed --> which is like, to me, the barber going to check the waiting room and seeing the door is locked and all!
+
+    # The Queue module takes care of locking for us which is a great advantage.
