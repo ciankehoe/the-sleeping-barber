@@ -1,5 +1,7 @@
-import time, random, threading
-from queue import Queue
+import threading
+import time
+import random
+import queue
 
 # dict mapping for names of barbers --> utilize IDs as well.
 # Only including 3 names as this was what was asked as the
@@ -7,21 +9,83 @@ from queue import Queue
 # This aspect can be removed to allow for more than 3 barbers.
 barber_names = ["John", "Jill", "Jacob"]
 
-# set to whatever length of time (seconds) we want the 'barbershop' to be open for.
-opening_time_length = 20
+# set to whatever length of time (seconds)
+# we want the 'barbershop' to be open for.
+opening_time_length = 10
 
-# count of customers who have been taken from the waiting room by a barber / worker
+# count of customers who have been taken
+# from the waiting room by a barber / worker.
 customers_gone_for_cut = 0
-# count of customers who have then successfully had 
+# count of customers who have then successfully had
 # their haircuts completed. (The trim() method run successfully.)
 haircuts_completed = 0
 
-num_seats = 15        #Number of seats in BarberShop 
-num_barbers = 3              #Number of Barbers working
-EVENT = threading.Event()   #Event flag, keeps track of Barber/Customer interactions
+# Count of total time spent cutting hair.
+total_haircut_time = 0
+
+num_seats = 15                  # Number of seats available in Barbershop waiting room.
+num_barbers = 3                 # Number of Barbers working.
+
+# Acts as a flag to notify barber when a new Customer has entered the Queue. Also used to wake barber.
+customer_available = threading.Event()
+
+# Flag to control state of barbershop (open/closed); used to allow barber threads to terminate.
 shop_open = threading.Event()
 
-class Customer(threading.Thread):       #Producer Thread
+
+def customer_frequency():
+    time.sleep(1 * random.random())
+
+
+# naming our barbers
+def map_barber(barber):
+    """Simple function to map our barbers to individual names and
+       thread ID.
+       To give names to more than 3 barbers, you will need to add
+       to the barber_names list.
+    """
+
+    if num_barbers <= len(barber_names):
+        barber.name = "{} | {} | ({})".format(barber_names[int(barber.name[-1]) - 1], barber.name, str(barber.ident))
+    else:
+        barber.name = "{} | ({})".format(barber.name, str(barber.ident))
+
+
+class Barber(threading.Thread):
+    """Consumer Thread"""
+
+    def __init__(self, queue):      #Constructor passes Global Queue (waiting_room) to Class
+        threading.Thread.__init__(self, daemon=True) #Makes the Thread a super low priority thread allowing it to be terminated easier
+        self.queue = queue
+        self.sleep = True   #No Customers in Queue therefore Barber sleeps by deafult
+
+    def run(self):
+        while not shop_open.is_set():
+            while self.queue.empty():
+                customer_available.wait()    #Waits for the Event flag to be set, Can be seen as the Barber Actually sleeping.
+                print(self.name, "Barber is sleeping...")
+            #mutex.acquire()
+            print(self.name, "Barber is awake.")
+            cust = self.queue
+            self.is_empty(self.queue)
+            cust = cust.get()  #FIFO Queue So first customer added is gotten.
+            global customers_gone_for_cut
+            customers_gone_for_cut += 1
+            cust.trim() #Customers Hair is being cut
+            cust = self.queue
+            cust.task_done()    #Customers Hair is cut
+            print(self.name)    #Which Barber served the Customer }
+
+    def is_empty(self, queue):  #Simple function that checks if there is a customer in the Queue and if so
+        if self.queue.empty():
+            self.sleep = True   #If nobody in the Queue Barber sleeps.
+        else:
+            self.sleep = False  #Else he wakes up.
+        print("------------------\n{} Barber sleep {}\n------------------".format(self.name, self.sleep))
+
+class Customer(threading.Thread):
+    """Producer Thread"""
+
     def __init__(self, queue):          #Constructor passes Global Queue (waiting_room) to Class
         threading.Thread.__init__(self)
         self.queue = queue
@@ -30,8 +94,8 @@ class Customer(threading.Thread):       #Producer Thread
         if not self.queue.full(): #Check queue size
             self.queue.put(self)
             print("Customer has joined the queue", threading.currentThread())
-            EVENT.set() #Sets EVENT flag to True i.e. Customer available in the Queue
-            EVENT.clear() #Alerts Barber that their is a Customer available in the Queue
+            customer_available.set() #Sets customer_available flag to True i.e. Customer available in the Queue
+            customer_available.clear() #Alerts Barber that their is a Customer available in the Queue
         else:
             print("Queue full, customer has left.") #If Queue is full, Customer leaves.
 
@@ -39,65 +103,32 @@ class Customer(threading.Thread):       #Producer Thread
         print("Customer haircut started.")
         a = 10 * random.random() #Retrieves random number.
         time.sleep(a) #Simulates the time it takes for a barber to give a haircut.
+        global total_haircut_time
+        total_haircut_time += a
+
         global haircuts_completed
         haircuts_completed += 1
         print("Haircut finished. Haircut took {}".format(a))    #Barber finished haircut.
 
 
-class Barber(threading.Thread):     #Consumer Thread
-    def __init__(self, queue):      #Constructor passes Global Queue (waiting_room) to Class
-        threading.Thread.__init__(self)
-        self.queue = queue
-        self.sleep = True   #No Customers in Queue therefore Barber sleeps by deafult
-    
-    def run(self):
-        while not shop_open.is_set():
-            while self.queue.empty():
-                EVENT.wait()    #Waits for the Event flag to be set, Can be seen as the Barber Actually sleeping.
-                print(self.name, "Barber is sleeping...")
-            #mutex.acquire()
-            print(self.name, "Barber is awake.")
-            cust = self.queue
-            self.is_empty(self.queue)   
-            cust = cust.get()  #FIFO Queue So first customer added is gotten.
-            global customers_gone_for_cut
-            customers_gone_for_cut += 1
-            cust.trim() #Customers Hair is being cut
-            cust = self.queue
-            cust.task_done()    #Customers Hair is cut  
-            print(self.name)    #Which Barber served the Customer }
-
-    def is_empty(self, queue):  #Simple function that checks if there is a customer in the Queue and if so  
-        if self.queue.empty():
-            self.sleep = True   #If nobody in the Queue Barber sleeps.
-        else:
-            self.sleep = False  #Else he wakes up.
-        print("------------------\n{} Barber sleep {}\n------------------".format(self.name, self.sleep))
-
-def customer_frequency():
-    time.sleep(1 * random.random())
-
-# naming our barbers
-def map_barber(barber):
-    if num_barbers <= 3:
-        barber.name = "{} | {} | ({})".format(barber_names[int(b.name[-1]) - 1], b.name, str(b.ident))
-    else:
-        b.name = "{} | ({})".format(b.name, str(b.ident))
-    
-
 if __name__ == '__main__':
     barbers = []
-    waiting_room = Queue(num_seats) #A queue of size Customer Seats
 
-    for b in range(num_barbers):
-        b=Barber(waiting_room) #Passing the Queue to the Barber class
-        b.daemon=True   #Makes the Thread a super low priority thread allowing it to be terminated easier
-        b.start()   #Invokes the run method in the Barber Class
+    # The Queue constructor creates a lock to protect the queue (our shared resource) when an element is added or removed. 
+    # Some conditions objects are created to notify events like the queue is not empty (get() call stops blocking), 
+    # queue is not full (put() call stops blocking) and all items have been processed (join() call stops blocking).
 
-        map_barber(b)
+    # Our waiting room is a queue of size num_seats
+    waiting_room = queue.Queue(num_seats)
 
-        print("Barber ID: ", b.name)
-        barbers.append(b)   #Adding the Barber Thread to an array for easy referencing later on.
+    for worker in range(num_barbers):
+        worker=Barber(waiting_room) # Giving the Queue access to the Barber.
+        worker.start()              # Starts the thread which calls the run method.
+
+        map_barber(worker)
+
+        print("Barber ID: ", worker.name)
+        barbers.append(worker)   #Adding the Barber Thread to an array for easy referencing later on.
 
 
 
@@ -123,34 +154,32 @@ if __name__ == '__main__':
     waiting_room.join()  # terminates all Customer Threads
 
     print("The shop is closed, is the queue empty?", waiting_room.empty())
-    #for i in range(num_barbers):
-    #    print("Go home")
-        #EVENT.set()
-        #EVENT.clear()
     print(waiting_room.empty())
-
-    #for i in barbers:
-    #   print("please", threading.activeCount())
-    #   EVENT.set()
-    #   i.join()   #Terminates all Barbers
-        #Program hangs due to infinite loop in Barber Class, use ctrl-z to exit.
-    for i in barbers:
-        if i.sleep is False:
-            print("I've come into this now")
-            print("still Stuck here")
-        print("Not working: ", i.sleep)
 
     shop_open.set()
 
     print("Active Threads", threading.activeCount())
+    print("#")
+    print("#")
+    print("#")
+    print("#")
+    print("#")
+    print("#")
+    print("Number of customers accepted for haircut (during opening time): {:>}".format(customers_gone_for_cut))
+    print("----------------------------------")
 
-    print("how many went -->", customers_gone_for_cut)
-    print("Total haircuts completed during opening time: ", haircuts_completed)
+
+    print("Total number of haircuts completed (during opening time): {:>7}".format(haircuts_completed))
+    print("----------------------------------")
 
 
     # get average process time
+    print("Average haircut time: ", total_haircut_time / haircuts_completed)
 
 
+    # The Queue module takes care of locking for us which is a great advantage.
 
-    # a customer object is added to the queue and then gets started. We set the EVENT flag to true and then quickly back to false
+ 
+
+    # a customer object is added to the queue and then gets started. We set the customer_available flag to true and then quickly back to false
     # essentially giving notice that there is now someone new in the queue
