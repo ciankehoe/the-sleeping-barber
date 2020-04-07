@@ -1,68 +1,82 @@
 # the-sleeping-barber
 
-I ran into some difficulties with regards the termination of the program, in terms of terminating the
-barber threads. Obviously had to make sure they'd completed their work.
+## Brief comments on method and implementation. 
+I initially started with a much more linear (non Object Oriented) approach which followed a much more traditional implementation. For example, I was making strong use of a mutex to control the state of the single barber, as well as a mutex to control access to the waiting room seats (shared resource). Through this I ensured mutual exclusion as only the single barber or any given new customer could change the state of the queue at once. I made sure to use a queue so as to guarantee a FIFO to avoid the possibility of starvation. 
+A variety of other semaphores / mutexes to control the state of the system (like entering the shop, getting their haircut, taking a free waiting room chair) resulted in what I saw as a logically sound solution. 
+One simple method of testing at that early stage which I personally found quite effective was lining up the customer and barber code bseide eachother and pairing the signals and waits on the semaphores.
+It was a great way of fully understanding the usefulness and importance of correct process synchronization techniques.
 
-Notice that, as soon as the main program exits, the thread t1 is killed. This method proves to be extremely useful in cases where program termination can be used to trigger the killing of threads. Note that in Python, the main program terminates as soon as all the non-daemon threads are dead, irrespective of the number of daemon threads alive. Hence, the resources held by these daemon threads, such as open files, database transactions, etc. may not be released properly. The initial thread of control in a python program is not a daemon thread. Killing a thread forcibly is not recommended unless it is known for sure, that doing so will not cause any leaks or deadlocks. --> tested this by making sure the barbers
-were all always sleeping by the end as there can't possibly be any more customers to deal with (due to the nature of the trim occuring in the customer class, just joining that does the job. DOUBLE CHECK THIS)
+However, this solution proved inadequate in design when moving forward and considering the case of multiple barbers, as obviously there is a lot more going on. This is the point at which I moved into the more OO design / implementation , which lead to the final version of my program. 
 
-shop open event flag is for dealing with termination of barbers
+I have commented my code quite liberally and hope that it provides adequate description of my source code and design. However, I would just like to add, one thing I found particularly challenging was how to logically control the waking of the barbers, in conjunction to accessing a single shared resource. But, the Queue module, in my opinion, deals with locking quite well and seemed to be significantly useful for this.
 
-timer used to only create (accept customers) for a certain amount of time --> simulating an opening period for the barber shop.
+I did
 
+## Bugs
+* 1.
+I ran into some difficulties with regards the termination of the
+barber threads while obviously making sure they'd completed their work. I initially tried a to join() them as with my Customer threads, but couldn't quite get it to work as I'd of liked. 
 
-we can see affects on the number of haircuts completed through tweaking the length of time it takes for
-a haircut (increasing might mean less in the same window of time and vice versa), and increasing the opening hours (timeout), we'll most likely see an increase in the number completed, particularly if we lower the time for a haircut also. 
+I initially considered placing None objects in the queue which would signals to the barber that they were done when they would get them from the queue, but that means the barber would be checking the queue to find out the store is closed. Which would be like, to me, the barber going to check the waiting room and seeing the door has been locked and the owner gone home! I didn't want the barber to have to check the queue to find out s(he) was finished.
 
+As you can see, I finished by making all the barbers into daemon threads which are killed when the main program exits. 
 
-was originally going to use the Timer() object from threading in order to manage the opening window of the barbershop but instead decided to go down an event driven route
-timer = threading.Timer(15, opening_hours)
-timer.start()
-timer.join()
+This method proves to be extremely useful in cases where program termination can be used to trigger the killing of threads. the only danger with these daemon threads is that the resources held by them may not be released properly. Killing a thread forcibly is not recommended unless it is known for sure, that doing so will not cause any leaks or deadlocks. 
+I used join() on all the customer threads [Ln. 212] to make sure they had finished getting their haircut, whilst also no longer accepting new customers once the shop had closed (timeout had been reached). The inherent design of the cut() method being in the Customer Class means there can't possibly be any more customers to deal with once we've used join() on the waiting_room [Ln. 212]. 
 
+I (roughly) tested that resources were being released properly by tracking the number of customers who were taken for a haircut, followed by the number who completed haircuts. This number was always the same. I also checked that the queue was always empty [Ln. 214] before setting the shop_open flag to False [Ln. 216].
 
-GET AVERAGES
+I understand however that this may not be an overall optimal / desired way of completing the program execution, so bugs may present themselves in ways that I've not considered.
 
+* 2
+At most one customer can be in a barber chair at once i.e A single Customer need to be paired off with a single Barber to have their hair cut by that barber alone. A mutex lock prevents more than one customer from possessing the chair at a time but I found this much trickier to deal with when it came to multiple barbers as opposed to my earlier solutions with a single barber. Basically preventing several barbers from cutting hair of the same customer.
 
-With one barber, you only need a message queue (the waiting room). Semaphores are embedded in it.
+I did consider applying some sort of pigeonhole-principle style structure to the shared resource / waiting room, in the form of splitting the queue into sub-queues which each barber would work on respectively. But, quickly saw how this would not be ideal; immediately would have lost the FIFO characteristic of the overall queue, amongst other things.
 
-With multiple barbers, coordination aims at:
+But, I believe I dealt with this somewhat well. I did mapping of Customer Thread IDs to Barber Thread IDs / names in order to test and make sure that only barber was cutting a single customers hair.  Again, I understand this may not be an optimal / bugfree approach. I could well be missing something here and understand possible limitations of my program.
 
-    preventing several barbers from cutting hair of the same customer.
+* 3
+As I mentioned before, a key problem I believe may still afflict my solution is the waking of all barbers every time a customer enters and having to implement a second check to send the unused barbers back to sleep. I don't believe it's ideal.
 
-    preventing from having only one busy barber while the others sleep all day long
-#################
+## Further Testing
+Overall, during the development of my program, I made heavy use of in-program testing (often in the form of various print statements) and the mapping of various thread parameters. 
 
+Looking back, I would have looked further into experimenting with and adding more logging statements and running tests externally somehow. Although I found it difficult to imagine how one might do so particularly efficiently, especially in a specialized manner for a multithreaded program such as this.
 
-The problem referenced in the Wikipedia remark is this: just because you have M barbers in the "barber is cutting hair" state and M customers in the "customer is having hair cut" state, there's no guarantee that some barber isn't trying to clip more than one customer, or that some customer doesn't have several barbers in his hair.
+We can see affects on the number of haircuts completed through tweaking the length of time it takes for a haircut in the code (increasing might mean less in the same window of time and vice versa). Increasing the opening hours (timeout), we'll most likely see an increase in the number completed, particularly if we lower the time for a haircut also. 
 
-In other words, once the proper number of customers have been allowed into the cutting room, how do the barbers and customers pair off? You can no longer say "barber is cutting hair" and "customer is having hair cut"; you have to say "barber is cutting hair of customer C" and "customer is having hair cut by barber B". 
+I also did a variety of testing on the averages and affects of tweaking these numbers in some simple ways.
 
+cutTime = 10 * random.random()
+customer_frequency() --> time.sleep(1 * random.random())
 
+With the below parameters:
+opening_time_length = 20
+num_barbers = 3
+num_seats = 15
 
+I got the below 6 times which are a random sample of average haircut times
 
+5.143296406185352
+5.4519967731533985
+5.556107048706706
+4.968878027697593
+4.841057706803752
+4.703623626298269
 
-Sleeping barber problem is about race conditions. Imagine you have the same Producer generating tasks(people coming to barbershop) and Consumer(barber). In case not to do busy waiting your Consumer sleeps when there are no more tasks in the queue, so when a new task arrives it first notifies Consumer that it shouldn't sleep. So now imagine a case, when you Consumer currently is executing task A, and task B arrives, it sees that Consumer is working and will just go to the queue, but its not an atomic operation, so between this check(that Consumer is busy) and adding itself to the queue, Consumer can already finish task A and check the queue, see nothing(as B is still not added), and go to sleep, however B doesn't know about that and will wait till eventually another task C will come and awake Consumer. 
-----------------> Talk about how I believe I've avoided this by making use of the event
+As we can see they are all approximately similar, however this changes depending on the speed of haircuts and number of barbers.
 
+By reducing:
+num_barbers = 1
 
-# Proof of Correctness
+But keeping the same num_seats (15) we can really see the affects of my implementation, and the importance and efficiency of the multithreading.
 
-Proof of correctness:
+Predictably it approximates to being 3 times as slow for the average haircut time.
 
-No two threads can be reading or writing the shared data numWaiting at a time. numWaiting is accessed only by customer threads, and the waitingRoom lock must be held in order to read or modify its value. YES
+Sample Average after 200 runs = 14.996796929689852
 
-The waiting room cannot hold more than NUM_WAITING_CHAIRS customers. The waitingRoom lock must be held in order to examine the number of waiting customers, and the number waiting is incremented if the waiting room is not full before the lock is released. The number of waiting customers is decremented exactly once for every time it is incremented, so it is an accurate count of the number of waiting customers. YES
+(Again, it is heavily dependent on the length of time I allow the shop to be open for, as well as the integer constant by which I set the 'random' cuttime and customer frequency to).
 
-At most one customer can be in the barber chair at once. A mutex lock prevents more than one customer from possessing the chair at a time. TRICKY TO DEAL WITH DUE TO MULTIPLE CHAIRS
+I did more of this testing which didn't give back any surprising results. A mixture of writing stats of the program to other files and running scripts over them really helped in this analysis.
 
-The following events are properly sequenced: customer waits in waiting room, customer sits in barber chair, barber cuts customer's hair, barber finishes haircut, customer leaves. The customer begins by waiting in the waiting room for the barber chair to become availabe. Only one customer at a time can acquire the barber chair lock, and the barber chair lock must be acquired before the customer can sit down. The customer now cannot proceed past waiting for the haircut to finish until the barber has finished the haircut. Meanwhile, the barber cannot proceed past the "waiting for customers" stage until signalled by the customer, which occurs after the customer has sat in the barber chair. The barber then cuts the hair and finishes the haircut, signalling the customer that the haircut is complete. The customer is then able to leave. The barber cannot proceed past the "waiting for customers" stage again until the next customer is seated in the barber's chair. Since only one customer at a time can make it past the "acquire barber chair lock" step, the right customer is signalled when the barber finishes the haircut. (This can also be demonstrated by lining up the customer and barber code side-by-side, pairing the signals and waits on the semaphores - the parts of the customer and barber which overlap between the signals and waits can safely be executed in any order, and using semaphores means that it is OK if one signals before the other waits.)
-
-The barber doesn't oversleep and miss a customer sitting in the barber chair. Each customer signals the barber when they've sat down, and using semaphores means that the order in which the customer signals and the barber waits doesn't matter. (With a condition variable, if the customer signalled before the barber went back to sleep after the previous customer, the barber would miss the wakeup call.) YES
-
-There is no deadlock. The only time that hold-and-wait occurs is when the customer is holding the barberchair lock and is attempting to acquire the waitingRoom lock. However, whenever the waitingRoom lock is held, there is nothing (other than the scheduling of the thread to run) to prevent the lock from being released.
-
-
-Considered placing None objects in the queue but that means the barber would be checking the queue to find out the store is closed --> which is like, to me, the barber going to check the waiting room and seeing the door is locked and all!
-
-    # The Queue module takes care of locking for us which is a great advantage.
+(Apologies for the verbose nature of this and it's length! Thanks very much for your time!)
